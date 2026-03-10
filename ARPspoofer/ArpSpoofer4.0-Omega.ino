@@ -330,23 +330,21 @@ static void handleWeb() {
 
     // --- HTML Emission (Optimized for SRAM) ---
     BufferFiller bfill = ether.tcpOffset();
-    bfill.emit_p(PSTR("HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n"
-                      "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
-                      "<style>body{background:#0a0a0a;color:#0f0;font-family:monospace;display:flex;flex-direction:column;align-items:center;padding:20px}"
-                      "h1{color:#00ffff;text-shadow:0 0 10px #00ffff} .card{background:#111;border:1px solid #333;padding:20px;border-radius:10px;width:100%;max-width:400px}"
-                      "button{background:#00ffff;color:#000;border:none;padding:10px 20px;font-weight:bold;cursor:pointer;width:100%;margin-top:10px}"
-                      "input{background:#222;color:#0f0;border:1px solid #333;padding:10px;width:calc(100% - 22px);margin-top:10px}</style></head><body>"
-                      "<h1>OMEGA DASHBOARD</h1><div class='card'>"
-                      "<p>STATUS: $S</p><p>IP: $D.$D.$D.$D</p><p>SENT: $L</p><p>RATE: $D PPS</p>"
+    bfill.emit_p(PSTR("HTTP/1.0 200 OK\r\nContent-Type:text/html\r\n\r\n"
+                      "<html><head><meta name='viewport' content='width=device-width'>"
+                      "<style>body{background:#000;color:#0f0;font-family:monospace;text-align:center;padding:10px} "
+                      "input,button{background:#222;color:#0f0;border:1px solid #0f0;padding:10px;margin:5px}</style></head><body>"
+                      "<h2>OMEGA 4.0</h2>"
+                      "<p>STS: $S | IP: $D.$D.$D.$D</p><p>TX: $L | $D PPS</p>"
                       "<form method='POST'>PW: <input type='password' name='pwd'><br>"
                       "<input type='hidden' name='cmd' value='toggle'><button>$S</button></form>"),
                  currentState == STATE_RUN ? (paused ? PSTR("PAUSED") : PSTR("RUNNING")) : PSTR("BUSY"),
                  myIp[0], myIp[1], myIp[2], myIp[3], totalPacketsSent, bucket.pps,
                  paused ? PSTR("RESUME") : PSTR("PAUSE"));
 
-    if (!authed) bfill.emit_p(PSTR("<p style='color:red'>AUTH FAILED</p>"));
+    if (!authed) bfill.emit_p(PSTR("<p style='color:red'>AUTH ERR</p>"));
     
-    bfill.emit_p(PSTR("</div></body></html>"));
+    bfill.emit_p(PSTR("</body></html>"));
     ether.httpServerReply(bfill.position());
   }
 }

@@ -286,13 +286,8 @@ static bool dhcpBlocking(uint8_t attempts) {
 // ─── PHY Link Check ──────────────────────────────────────────
 
 static bool phyLinkUp() {
-  // PHSTAT2 bit 10 = LSTAT
-  // ether.regRd() is not exposed in all EtherCard builds; we check myip.
-  // As a proxy: if the IP zeroed out the DHCP stack lost the lease.
-  // True PHY check would require direct SPI access to PHSTAT2 register.
-  // We use the pragmatic lease-validity check here.
-  return !(ether.myip[0] == 0 && ether.myip[1] == 0 && ether.myip[2] == 0 &&
-           ether.myip[3] == 0);
+  // EtherCard 1.1.0+ exposes isLinkUp() which directly reads the PHSTAT2 register
+  return ether.isLinkUp();
 }
 
 // ─── Web Dashboard Core ──────────────────────────────────────
@@ -714,40 +709,34 @@ static void stateRecovery() {
   static bool entered = false;
   if (!entered) {
     entered = true;
-    Serial.println(F("[RECOVERY] Attempting DHCP re-lease..."));
-    ledBlink(3, 300, 150);
+    Serial.println(F("[RECOVERY] Link lost. Waiting for cable..."));
   }
 
-  // Try to rediscover IP
-  if (dhcpOnce()) {
-    Serial.print(F("[RECOVERY] IP restored: "));
-    printIp();
-    Serial.println();
-    entered = false;
-    announceSent = 0;
-    uint16_t jitter = lfsrRand() % ANNOUNCE_JITTER_MS;
-    nextAnnounceMs = millis() + jitter;
-    currentState = STATE_ANNOUNCE;
-    return;
-  }
-
-  dhcpFailCount++;
-
-  // Backoff retry
-  uint32_t backoff = DHCP_BASE_MS << (dhcpRetries < 5 ? dhcpRetries : 5);
-  if (backoff > DHCP_MAX_BACKOFF_MS)
-    backoff = DHCP_MAX_BACKOFF_MS;
-  safeDelay(backoff); // safe: resets WDT internally
-  if (dhcpRetries < 255)
-    dhcpRetries++;
-
-  // Slow amber blink
+  // Slow amber blink while waiting for physical link
   static uint32_t blinkMs = 0;
   static bool ledOn = false;
   if ((uint32_t)(millis() - blinkMs) >= 400) {
     blinkMs = millis();
     ledOn = !ledOn;
     digitalWrite(LED_PIN, ledOn ? HIGH : LOW);
+  }
+
+  // Check if physical link is back
+  if (phyLinkUp()) {
+    Serial.println(F("[RECOVERY] Link restored. Resuming..."));
+    entered = false;
+    
+    // Safety re-assert static IP just in case
+    uint8_t sip[] = {DEFAULT_STATIC_IP};
+    uint8_t sgw[] = {DEFAULT_GATEWAY};
+    uint8_t smsk[] = {DEFAULT_MASK};
+    ether.staticSetup(sip, sgw, NULL, smsk);
+    memcpy(myIp, ether.myip, 4);
+
+    announceSent = 0;
+    uint16_t jitter = lfsrRand() % ANNOUNCE_JITTER_MS;
+    nextAnnounceMs = millis() + jitter;
+    currentState = STATE_ANNOUNCE;
   }
 }
 

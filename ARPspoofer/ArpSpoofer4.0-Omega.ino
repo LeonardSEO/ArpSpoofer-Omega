@@ -47,6 +47,13 @@
 #define DHCP_INIT_ATTEMPTS   5
 #define PHY_CHECK_INTERVAL   2000UL      // poll PHY every 2 s
 #define STATS_REPORT_INTERVAL 10000UL   // auto-stats every 10 s
+#define DHCP_RETRY_LIMIT     10          // attempts before static fallback
+
+// ─── Static IP Fallback Settings ─────────────────────────────
+#define USE_STATIC_FALLBACK  true        // Set to false to disable
+#define DEFAULT_STATIC_IP    192, 168, 1, 137
+#define DEFAULT_GATEWAY      192, 168, 1, 1
+#define DEFAULT_MASK         255, 255, 255, 0
 
 // ─── Web Dashboard Settings ──────────────────────────────────
 #define AUTH_PASSWORD        "OMEGA"     // Default web password
@@ -525,6 +532,7 @@ static void stateDhcp() {
   if ((uint32_t)(millis() - lastDhcpAttemptMs) >= backoff) {
     lastDhcpAttemptMs = millis();
     Serial.print(F("[DHCP] Retry #")); Serial.println(dhcpRetries + 1);
+    
     if (dhcpOnce()) {
       Serial.print(F("[DHCP] Lease OK. IP: ")); printIp(); Serial.println();
       dhcpRetries  = 0;
@@ -535,6 +543,23 @@ static void stateDhcp() {
     } else {
       dhcpFailCount++;
       if (dhcpRetries < 255) dhcpRetries++;
+      
+      // Check for static fallback
+      if (USE_STATIC_FALLBACK && dhcpRetries >= DHCP_RETRY_LIMIT) {
+        Serial.println(F("[DHCP] Limit reached. Falling back to STATIC IP."));
+        uint8_t sip[] = { DEFAULT_STATIC_IP };
+        uint8_t sgw[] = { DEFAULT_GATEWAY };
+        uint8_t smsk[] = { DEFAULT_MASK };
+        ether.staticSetup(sip, sgw, NULL, smsk);
+        memcpy(myIp, ether.myip, 4);
+        
+        Serial.print(F("[INIT] Static IP Set: ")); printIp(); Serial.println();
+        dhcpRetries  = 0;
+        firstAttempt = true;
+        announceSent = 0;
+        nextAnnounceMs = millis() + (lfsrRand() % ANNOUNCE_JITTER_MS);
+        currentState = STATE_ANNOUNCE;
+      }
     }
   }
 

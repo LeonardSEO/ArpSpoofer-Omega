@@ -17,6 +17,7 @@
 
 - **Ouroboros State Machine:** A robust logic core managing `INIT`, `DHCP`, `ANNOUNCE`, `RUN`, and `RECOVERY` states, ensuring 99.9% uptime on isolated segments.
 - **Token-Bucket Rate Limiter:** Advanced flow control allowing for high-intensity bursts while maintaining a strict, user-defined average PPS (Packets Per Second).
+- **Omega Web Dashboard (V2):** A lightweight, responsive, and dark-mode HTTP interface built directly into the ENC28J60 stack for real-time remote execution.
 - **RFC 5227 Compliance:** Implements the official IPv4 Address Conflict Detection announce sequence (3 GARPs with pseudo-random jitter).
 - **Automatic PHY Recovery:** Real-time link-layer monitoring. If the connection is severed or the DHCP lease is revoked, the Engine automatically transitions to recovery mode.
 - **EEPROM Intelligence:** Persistent storage for MAC addresses, PPS rates, and operational modes. Your tactical configuration survives power cycles.
@@ -65,12 +66,23 @@ The Omega Engine features an advanced real-time interface at **115200 baud**.
 
 ---
 
+## 🌐 Omega Web Dashboard
+
+The 4.0 Engine hosts an ultra-lightweight HTTP configuration panel reachable at the IP address assigned via DHCP. 
+It operates asynchronously alongside the main attack loop.
+
+- **URL:** `http://<device_ip>/`
+- **Default Auth Target:** `OMEGA`
+- **Features:** Real-time PPS adjustment, Attack Toggle, and live statistics reporting.
+
+---
+
 ## 🗺 Roadmap to 5.0
 - [x] State Machine Overhaul
 - [x] Token-Bucket Integration
 - [x] EEPROM Persistence
+- [x] Web-based Dashboard (ENC28J60 HTTP Stack)
 - [ ] Multi-Target Cycle Mode
-- [ ] Web-based Dashboard (ENC28J60 HTTP Stack)
 - [ ] OUI Impersonation Tables
 
 ---

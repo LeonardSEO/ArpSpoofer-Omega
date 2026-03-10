@@ -490,6 +490,7 @@ void setup() {
 
 static void stateInit() {
   Serial.println(F("[INIT] Starting ENC28J60..."));
+  Serial.flush();  // Force serial output before accessing hardware
 
   if (ether.begin(WEB_BUFFER_SIZE, myMac, ENC_CS_PIN) == 0) {
     Serial.println(F("[INIT] ENC28J60 FAILED – halting."));
@@ -675,17 +676,28 @@ static void stateRecovery() {
 void loop() {
   wdt_reset();
   
-  // Handle HTTP requests (non-blocking)
-  handleWeb();
-  
   // Handle Serial inputs (non-blocking)
   handleSerial();
 
   switch (currentState) {
-    case STATE_INIT:     stateInit();     break;
-    case STATE_DHCP:     stateDhcp();     break;
-    case STATE_ANNOUNCE: stateAnnounce(); break;
-    case STATE_RUN:      stateRun();      break;
-    case STATE_RECOVERY: stateRecovery(); break;
+    case STATE_INIT:     
+      stateInit();     
+      break;
+    case STATE_DHCP:     
+      if (currentState != STATE_INIT) handleWeb(); // safely access SPI
+      stateDhcp();     
+      break;
+    case STATE_ANNOUNCE: 
+      if (currentState != STATE_INIT) handleWeb();
+      stateAnnounce(); 
+      break;
+    case STATE_RUN:      
+      if (currentState != STATE_INIT) handleWeb();
+      stateRun();      
+      break;
+    case STATE_RECOVERY: 
+      if (currentState != STATE_INIT) handleWeb();
+      stateRecovery(); 
+      break;
   }
 }
